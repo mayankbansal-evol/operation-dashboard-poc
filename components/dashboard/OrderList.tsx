@@ -4,9 +4,16 @@ import { ArrowUpRight, Inbox } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   cn,
   formatDate,
   formatDaysRemaining,
+  getDaysRemaining,
   getUrgencyLevel,
 } from "@/lib/utils";
 import type { Order } from "@/types";
@@ -35,6 +42,55 @@ const STAGE_COLORS: Record<string, string> = {
     "border-emerald-200 text-emerald-700 bg-emerald-50/50 dark:border-emerald-800 dark:text-emerald-400 dark:bg-emerald-950/20",
 };
 
+function UrgencyTooltip({
+  children,
+  urgency,
+  deliveryDate,
+}: {
+  children: React.ReactNode;
+  urgency: ReturnType<typeof getUrgencyLevel>;
+  deliveryDate: string | undefined;
+}) {
+  if (!deliveryDate) return <>{children}</>;
+
+  const days = getDaysRemaining(deliveryDate);
+  let message = "";
+  if (days === null) message = "No delivery date set";
+  else if (days < 0)
+    message = `${Math.abs(days)} days overdue · was due ${formatDate(deliveryDate)}`;
+  else if (days === 0) message = "Due today";
+  else if (days === 1) message = "Due tomorrow";
+  else message = `${days} days remaining · due ${formatDate(deliveryDate)}`;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent side="left">
+        <p className="text-xs">{message}</p>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+function RowTooltip({
+  children,
+  type,
+}: {
+  children: React.ReactNode;
+  type: Order["type"];
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent side="right">
+        <p className="text-xs">
+          {type === "enquiry" ? "View enquiry →" : "View order details →"}
+        </p>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 export function OrderList({ orders }: OrderListProps) {
   if (orders.length === 0) {
     return (
@@ -51,119 +107,150 @@ export function OrderList({ orders }: OrderListProps) {
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-card">
-      {/* Column headers */}
-      <div className="grid grid-cols-[16px_1fr_148px_110px_110px_108px_28px] items-center gap-3 border-b border-border bg-muted/30 px-4 py-2">
-        <span />
-        <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/70">
-          Customer
-        </span>
-        <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/70">
-          Stage
-        </span>
-        <span className="hidden text-[11px] font-medium uppercase tracking-wide text-muted-foreground/70 md:block">
-          Salesperson
-        </span>
-        <span className="hidden text-[11px] font-medium uppercase tracking-wide text-muted-foreground/70 lg:block">
-          Vendor
-        </span>
-        <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/70">
-          Delivery
-        </span>
-        <span />
+    <TooltipProvider>
+      <div className="overflow-hidden rounded-2xl border border-border bg-card">
+        {/* Column headers */}
+        <div className="grid grid-cols-[16px_1fr_140px_100px_100px_90px_90px_28px] items-center gap-3 border-b border-border bg-muted/30 px-4 py-2">
+          <span />
+          <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/70">
+            Customer
+          </span>
+          <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/70">
+            Stage
+          </span>
+          <span className="hidden text-[11px] font-medium uppercase tracking-wide text-muted-foreground/70 md:block">
+            Salesperson
+          </span>
+          <span className="hidden text-[11px] font-medium uppercase tracking-wide text-muted-foreground/70 lg:block">
+            Vendor
+          </span>
+          <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/70">
+            Created
+          </span>
+          <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/70">
+            Delivery
+          </span>
+          <span />
+        </div>
+
+        {/* Rows */}
+        <ul className="divide-y divide-border/60">
+          {orders.map((order) => {
+            const urgency = getUrgencyLevel(order.deliveryDate);
+            const daysLabel = formatDaysRemaining(order.deliveryDate);
+            const deliveryFormatted = order.deliveryDate
+              ? formatDate(order.deliveryDate)
+              : "—";
+            const createdFormatted = order.createdAt
+              ? formatDate(order.createdAt)
+              : "—";
+            const stageColorClass =
+              STAGE_COLORS[order.currentStage] ??
+              "border-border text-muted-foreground";
+
+            return (
+              <li key={order.id}>
+                <Link
+                  href={`/orders/${order.shareableToken}`}
+                  className="group grid grid-cols-[16px_1fr_140px_100px_100px_90px_90px_28px] items-center gap-3 px-4 py-3.5 transition-colors hover:bg-muted/30"
+                >
+                  {/* Urgency dot with tooltip */}
+                  <UrgencyTooltip
+                    urgency={urgency}
+                    deliveryDate={order.deliveryDate}
+                  >
+                    <div className="flex items-center justify-center">
+                      <UrgencyDot level={urgency} />
+                    </div>
+                  </UrgencyTooltip>
+
+                  {/* Customer + meta with type pill */}
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-foreground">
+                      {order.customerName}
+                    </p>
+                    <div className="flex items-center gap-1.5 truncate text-[11px]">
+                      {order.type === "enquiry" ? (
+                        <span className="inline-flex items-center rounded border border-border bg-muted px-1 py-px text-[10px] text-muted-foreground">
+                          Enquiry
+                        </span>
+                      ) : (
+                        <span className="font-mono text-muted-foreground">
+                          {order.orderNumber || "Order"}
+                        </span>
+                      )}
+                      <span className="text-muted-foreground/50">·</span>
+                      <span className="text-muted-foreground">
+                        {order.category}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Stage */}
+                  <div>
+                    <span
+                      className={cn(
+                        "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium",
+                        stageColorClass,
+                      )}
+                    >
+                      {order.currentStage}
+                    </span>
+                  </div>
+
+                  {/* Salesperson */}
+                  <div className="hidden md:block">
+                    <p className="truncate text-sm text-foreground">
+                      {order.salespersonName}
+                    </p>
+                  </div>
+
+                  {/* Vendor */}
+                  <div className="hidden lg:block">
+                    <p className="truncate text-sm text-muted-foreground">
+                      {order.vendorName ?? "—"}
+                    </p>
+                  </div>
+
+                  {/* Created */}
+                  <div>
+                    <p className="text-sm text-muted-foreground tabular-nums">
+                      {createdFormatted}
+                    </p>
+                  </div>
+
+                  {/* Delivery */}
+                  <div>
+                    <p className="text-sm text-foreground tabular-nums">
+                      {deliveryFormatted}
+                    </p>
+                    <p
+                      className={cn(
+                        "text-[11px] tabular-nums",
+                        urgency === "overdue" &&
+                          "font-medium text-red-600 dark:text-red-400",
+                        urgency === "due-soon" &&
+                          "font-medium text-amber-600 dark:text-amber-400",
+                        urgency === "on-track" && "text-muted-foreground",
+                        urgency === "none" && "text-muted-foreground/50",
+                      )}
+                    >
+                      {daysLabel}
+                    </p>
+                  </div>
+
+                  {/* Link arrow with tooltip */}
+                  <RowTooltip type={order.type}>
+                    <div className="flex justify-end">
+                      <ArrowUpRight className="h-4 w-4 text-muted-foreground/25 transition-colors group-hover:text-muted-foreground" />
+                    </div>
+                  </RowTooltip>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
       </div>
-
-      {/* Rows */}
-      <ul className="divide-y divide-border/60">
-        {orders.map((order) => {
-          const urgency = getUrgencyLevel(order.deliveryDate);
-          const daysLabel = formatDaysRemaining(order.deliveryDate);
-          const deliveryFormatted = order.deliveryDate
-            ? formatDate(order.deliveryDate)
-            : "—";
-          const stageColorClass =
-            STAGE_COLORS[order.currentStage] ??
-            "border-border text-muted-foreground";
-
-          return (
-            <li key={order.id}>
-              <Link
-                href={`/orders/${order.shareableToken}`}
-                className="group grid grid-cols-[16px_1fr_148px_110px_110px_108px_28px] items-center gap-3 px-4 py-3.5 transition-colors hover:bg-muted/30"
-              >
-                {/* Urgency dot */}
-                <div className="flex items-center justify-center">
-                  <UrgencyDot level={urgency} />
-                </div>
-
-                {/* Customer + meta */}
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-foreground">
-                    {order.customerName}
-                  </p>
-                  <p className="truncate text-[11px] text-muted-foreground">
-                    {order.type === "order" && order.orderNumber
-                      ? order.orderNumber
-                      : "Enquiry"}{" "}
-                    · {order.category}
-                  </p>
-                </div>
-
-                {/* Stage */}
-                <div>
-                  <span
-                    className={cn(
-                      "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium",
-                      stageColorClass,
-                    )}
-                  >
-                    {order.currentStage}
-                  </span>
-                </div>
-
-                {/* Salesperson */}
-                <div className="hidden md:block">
-                  <p className="truncate text-sm text-foreground">
-                    {order.salespersonName}
-                  </p>
-                </div>
-
-                {/* Vendor */}
-                <div className="hidden lg:block">
-                  <p className="truncate text-sm text-muted-foreground">
-                    {order.vendorName ?? "—"}
-                  </p>
-                </div>
-
-                {/* Delivery */}
-                <div>
-                  <p className="text-sm text-foreground tabular-nums">
-                    {deliveryFormatted}
-                  </p>
-                  <p
-                    className={cn(
-                      "text-[11px] tabular-nums",
-                      urgency === "overdue" &&
-                        "font-medium text-red-600 dark:text-red-400",
-                      urgency === "due-soon" &&
-                        "font-medium text-amber-600 dark:text-amber-400",
-                      urgency === "on-track" && "text-muted-foreground",
-                      urgency === "none" && "text-muted-foreground/50",
-                    )}
-                  >
-                    {daysLabel}
-                  </p>
-                </div>
-
-                {/* Link arrow */}
-                <div className="flex justify-end">
-                  <ArrowUpRight className="h-4 w-4 text-muted-foreground/25 transition-colors group-hover:text-muted-foreground" />
-                </div>
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-    </div>
+    </TooltipProvider>
   );
 }
