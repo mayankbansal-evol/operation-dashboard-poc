@@ -1,16 +1,15 @@
 "use client";
 
-import { ArrowLeft, Check, Copy, ExternalLink } from "lucide-react";
+import { ArrowLeft, Check, Copy, GitPullRequest } from "lucide-react";
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
 import { useState } from "react";
 import { UrgencyDot } from "@/components/dashboard/UrgencyDot";
-import { ActivityFeed } from "@/components/order/ActivityFeed";
+import { ActivityTimeline } from "@/components/order/ActivityTimeline";
+import { ComposeBox } from "@/components/order/ComposeBox";
 import { OrderDetails } from "@/components/order/OrderDetails";
-import { PostUpdateForm } from "@/components/order/PostUpdateForm";
 import { StageBar } from "@/components/order/StageBar";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { getOrderByToken } from "@/lib/mock-data";
 import {
   cn,
@@ -18,23 +17,23 @@ import {
   formatDaysRemaining,
   getUrgencyLevel,
 } from "@/lib/utils";
-import type { ActivityEntry, Order, Stage } from "@/types";
+import type { ActivityEntry, ActorRole, Order, Stage } from "@/types";
+
+// ─── Copy link button ─────────────────────────────────────────────────────────
 
 function CopyLinkButton() {
   const [copied, setCopied] = useState(false);
-
   function handleCopy() {
     navigator.clipboard.writeText(window.location.href);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
-
   return (
     <Button
       variant="outline"
       size="sm"
       onClick={handleCopy}
-      className="gap-1.5"
+      className="h-8 gap-1.5 text-xs"
     >
       {copied ? (
         <>
@@ -51,6 +50,61 @@ function CopyLinkButton() {
   );
 }
 
+// ─── Actors bar — who is involved in this order ───────────────────────────────
+
+function ActorsBar({ order }: { order: Order }) {
+  const actors = [
+    { role: "sales" as ActorRole, label: "Sales", name: order.salespersonName },
+    ...(order.vendorName
+      ? [
+          {
+            role: "vendor" as ActorRole,
+            label: "Vendor",
+            name: order.vendorName,
+          },
+        ]
+      : []),
+    {
+      role: "customer" as ActorRole,
+      label: "Customer",
+      name: order.customerName,
+    },
+  ];
+
+  const roleColors: Record<ActorRole, string> = {
+    sales: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
+    vendor: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
+    owner:
+      "bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300",
+    customer:
+      "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
+  };
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {actors.map(({ role, label, name }) => (
+        <div
+          key={role}
+          className="flex items-center gap-1.5 rounded-full border border-border bg-card px-2.5 py-1"
+        >
+          <div
+            className={cn(
+              "flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold",
+              roleColors[role],
+            )}
+          >
+            {name.slice(0, 2).toUpperCase()}
+          </div>
+          <span className="text-xs text-muted-foreground">{label}:</span>
+          <span className="text-xs font-medium text-foreground">{name}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function OrderPage() {
   const params = useParams();
   const token = params.token as string;
@@ -58,7 +112,6 @@ export default function OrderPage() {
   const initialOrder = getOrderByToken(token);
   if (!initialOrder) notFound();
 
-  // Local state to allow in-memory updates within a session
   const [order, setOrder] = useState<Order>(initialOrder);
 
   const urgency = getUrgencyLevel(order.deliveryDate);
@@ -66,15 +119,16 @@ export default function OrderPage() {
 
   function handlePostUpdate({
     name,
+    role,
     note,
     newStage,
   }: {
     name: string;
+    role: ActorRole;
     note: string;
     newStage: Stage | null;
   }) {
     const timestamp = new Date().toISOString();
-
     const newEntries: ActivityEntry[] = [];
 
     if (newStage && newStage !== order.currentStage) {
@@ -82,8 +136,10 @@ export default function OrderPage() {
         id: `act-${Date.now()}-stage`,
         orderId: order.id,
         postedBy: name,
+        actorRole: role,
         timestamp,
         type: "stage_change",
+        previousStage: order.currentStage,
         newStage,
         note: note || undefined,
       });
@@ -92,11 +148,14 @@ export default function OrderPage() {
         id: `act-${Date.now()}-note`,
         orderId: order.id,
         postedBy: name,
+        actorRole: role,
         timestamp,
         type: "note",
         note,
       });
     }
+
+    if (newEntries.length === 0) return;
 
     setOrder((prev) => ({
       ...prev,
@@ -104,12 +163,19 @@ export default function OrderPage() {
       lastUpdatedAt: timestamp,
       activityFeed: [...prev.activityFeed, ...newEntries],
     }));
+
+    // Scroll to bottom of timeline after a tick
+    setTimeout(() => {
+      document
+        .getElementById("timeline-end")
+        ?.scrollIntoView({ behavior: "smooth", block: "end" });
+    }, 100);
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-0">
-      {/* Back nav */}
-      <div className="mb-6">
+    <div className="mx-auto max-w-3xl">
+      {/* ── Back nav ─────────────────────────────────────────────────── */}
+      <div className="mb-5">
         <Button
           variant="ghost"
           size="sm"
@@ -123,128 +189,119 @@ export default function OrderPage() {
         </Button>
       </div>
 
-      {/* ── Order Header ──────────────────────────────────────────────── */}
-      <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
-        <div className="space-y-1.5">
-          {/* Type + order number */}
-          <div className="flex flex-wrap items-center gap-2">
+      {/* ── Page header ──────────────────────────────────────────────── */}
+      <div className="mb-6">
+        {/* Type + order number row */}
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          <span
+            className={cn(
+              "rounded-full px-2.5 py-0.5 text-xs font-medium",
+              order.type === "order"
+                ? "bg-foreground text-background"
+                : "border border-border text-muted-foreground",
+            )}
+          >
+            {order.type === "order" ? "Order" : "Enquiry"}
+          </span>
+          {order.orderNumber && (
+            <span className="font-mono text-sm text-muted-foreground">
+              {order.orderNumber}
+            </span>
+          )}
+          {/* Urgency */}
+          {order.deliveryDate && (
             <span
               className={cn(
-                "rounded-full px-2.5 py-0.5 text-xs font-medium",
-                order.type === "order"
-                  ? "bg-foreground text-background"
-                  : "border border-border text-muted-foreground",
+                "flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium",
+                urgency === "overdue" &&
+                  "bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400",
+                urgency === "due-soon" &&
+                  "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400",
+                urgency === "on-track" &&
+                  "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400",
               )}
             >
-              {order.type === "order" ? "Order" : "Enquiry"}
+              <UrgencyDot level={urgency} />
+              {daysLabel}
             </span>
-            {order.orderNumber && (
-              <span className="font-mono text-sm text-muted-foreground">
-                {order.orderNumber}
-              </span>
-            )}
-          </div>
-
-          {/* Customer name */}
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            {order.customerName}
-          </h1>
-
-          {/* Meta row */}
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-            <span>{order.category}</span>
-            <span className="text-border">·</span>
-            <span>{order.salespersonName}</span>
-            {order.vendorName && (
-              <>
-                <span className="text-border">·</span>
-                <span>{order.vendorName}</span>
-              </>
-            )}
-            {order.deliveryDate && (
-              <>
-                <span className="text-border">·</span>
-                <span className="flex items-center gap-1.5">
-                  <UrgencyDot level={urgency} />
-                  <span
-                    className={cn(
-                      urgency === "overdue" &&
-                        "font-medium text-red-600 dark:text-red-400",
-                      urgency === "due-soon" &&
-                        "font-medium text-amber-600 dark:text-amber-400",
-                    )}
-                  >
-                    {formatDate(order.deliveryDate)} · {daysLabel}
-                  </span>
-                </span>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div className="flex items-center gap-2">
-          {order.type === "enquiry" && (
-            <Button size="sm" asChild>
-              <Link href={`/orders/new?from=${order.id}`} className="gap-1.5">
-                <ExternalLink className="h-3.5 w-3.5" />
-                Convert to Order
-              </Link>
-            </Button>
           )}
-          <CopyLinkButton />
+          {/* Actions — top right */}
+          <div className="ml-auto flex items-center gap-2">
+            {order.type === "enquiry" && (
+              <Button size="sm" asChild className="h-8 gap-1.5 text-xs">
+                <Link href={`/orders/new?from=${order.id}`}>
+                  <GitPullRequest className="h-3.5 w-3.5" />
+                  Convert to Order
+                </Link>
+              </Button>
+            )}
+            <CopyLinkButton />
+          </div>
         </div>
+
+        {/* Customer name */}
+        <h1 className="mb-3 text-xl font-semibold tracking-tight text-foreground">
+          {order.customerName}
+          <span className="ml-2 font-normal text-muted-foreground">·</span>
+          <span className="ml-2 text-base font-normal text-muted-foreground">
+            {order.category}
+          </span>
+        </h1>
+
+        {/* Actors bar */}
+        <ActorsBar order={order} />
       </div>
 
-      {/* ── Stage Bar ─────────────────────────────────────────────────── */}
-      <div className="mb-8 rounded-xl border border-border bg-card p-5">
-        <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
-          Pipeline
-        </p>
+      {/* ── Stage Bar ────────────────────────────────────────────────── */}
+      <div className="mb-5 rounded-xl border border-border bg-card px-5 py-4">
         <StageBar
           currentStage={order.currentStage}
           cadDesignRequired={order.cadDesignRequired}
         />
       </div>
 
-      {/* ── Order Details ─────────────────────────────────────────────── */}
-      <div className="mb-8 rounded-xl border border-border bg-card p-5">
-        <p className="mb-5 text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
-          Order Details
-        </p>
-        <OrderDetails order={order} />
+      {/* ── Order Details (collapsible) ──────────────────────────────── */}
+      <div className="mb-5">
+        <OrderDetails order={order} defaultOpen={false} />
       </div>
 
-      {/* ── Activity + Update form ────────────────────────────────────── */}
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        {/* Activity feed */}
-        <div className="rounded-xl border border-border bg-card p-5">
-          <div className="mb-5 flex items-center justify-between">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
-              Activity
-            </p>
-            <span className="text-xs text-muted-foreground">
-              {order.activityFeed.length}{" "}
-              {order.activityFeed.length === 1 ? "entry" : "entries"}
-            </span>
-          </div>
-          <ActivityFeed entries={order.activityFeed} />
+      {/* ── Timeline ─────────────────────────────────────────────────── */}
+      <div className="rounded-xl border border-border bg-card">
+        {/* Timeline header */}
+        <div className="flex items-center justify-between border-b border-border px-5 py-3.5">
+          <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">
+            Activity
+          </span>
+          <span className="text-xs text-muted-foreground">
+            {order.activityFeed.length}{" "}
+            {order.activityFeed.length === 1 ? "event" : "events"}
+          </span>
         </div>
 
-        {/* Post update */}
-        <div className="rounded-xl border border-border bg-card p-5">
-          <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
-            Post an Update
+        {/* Events */}
+        <div className="px-5 pt-5">
+          <ActivityTimeline entries={order.activityFeed} />
+        </div>
+
+        {/* Divider between timeline and compose */}
+        <div className="mx-5 border-t border-dashed border-border" />
+
+        {/* Compose box — inline continuation of the thread */}
+        <div className="px-5 pb-5 pt-4">
+          <p className="mb-3 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50">
+            Post an update
           </p>
-          <PostUpdateForm
+          <ComposeBox
             currentStage={order.currentStage}
             onSubmit={handlePostUpdate}
           />
         </div>
+
+        {/* Scroll anchor */}
+        <div id="timeline-end" />
       </div>
 
-      {/* Bottom spacing */}
-      <div className="h-12" />
+      <div className="h-16" />
     </div>
   );
 }
