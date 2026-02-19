@@ -164,4 +164,32 @@
   ::-webkit-scrollbar-thumb {
     @apply rounded-full bg-border;
   }
+
+  /* Thin scrollbar utility for kanban */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border));
+    border-radius: 2px;
+  }
+
+  /* Snap scroll utilities */
+  .snap-x {
+    scroll-snap-type: x mandatory;
+  }
+  .snap-mandatory {
+    scroll-snap-type: x mandatory;
+  }
+  .snap-center {
+    scroll-snap-align: center;
+  }
 }
