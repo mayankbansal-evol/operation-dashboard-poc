@@ -70,14 +70,16 @@ function FileAttachment({
 }) {
   const isImage = file.fileType === "image";
   return (
-    <div className="mt-2.5 inline-flex items-center gap-2 rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm">
+    <div className="mt-2.5 flex min-w-0 max-w-full items-center gap-2 rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm">
       {isImage ? (
         <ImageIcon className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
       ) : (
         <FileText className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
       )}
-      <span className="font-medium text-foreground">{file.filename}</span>
-      <span className="rounded border border-border bg-background px-1 py-px text-[10px] uppercase text-muted-foreground">
+      <span className="min-w-0 truncate font-medium text-foreground">
+        {file.filename}
+      </span>
+      <span className="ml-auto flex-shrink-0 rounded border border-border bg-background px-1 py-px text-[10px] uppercase text-muted-foreground">
         {file.fileType}
       </span>
     </div>
@@ -124,35 +126,39 @@ function SystemEvent({
       </div>
 
       {/* Content */}
-      <div className="flex-1 pb-5">
+      <div className="min-w-0 flex-1 pb-5">
         {isCreated ? (
           /* Order Created — slightly more prominent */
-          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 pt-0.5">
-            <span className="text-sm font-medium text-foreground">
-              {entry.postedBy}
-            </span>
-            <RoleBadge role={entry.actorRole} />
-            <span className="text-sm text-muted-foreground">
-              {entry.type === "order_created" ? "created this order" : ""}
-            </span>
-            <span className="ml-auto text-xs text-muted-foreground/60 tabular-nums">
+          <div className="min-w-0 pt-0.5">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
+              <span className="text-sm font-medium text-foreground">
+                {entry.postedBy}
+              </span>
+              <RoleBadge role={entry.actorRole} />
+              <span className="text-sm text-muted-foreground">
+                {entry.type === "order_created" ? "created this order" : ""}
+              </span>
+            </div>
+            <span className="mt-0.5 block text-xs text-muted-foreground/60 tabular-nums">
               {formatDateTime(entry.timestamp)}
             </span>
           </div>
         ) : (
           /* Stage change — inline pill */
-          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 pt-0.5">
-            <span className="text-sm text-muted-foreground">
-              <span className="font-medium text-foreground">
-                {entry.postedBy}
+          <div className="min-w-0 pt-0.5">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
+              <span className="text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">
+                  {entry.postedBy}
+                </span>
+                {" moved to "}
               </span>
-              {" moved to "}
-            </span>
-            <span className="inline-flex items-center gap-1 rounded-full border border-foreground/20 bg-foreground/5 px-2 py-0.5 text-xs font-medium text-foreground">
-              <ArrowRight className="h-2.5 w-2.5" strokeWidth={2.5} />
-              {entry.newStage}
-            </span>
-            <span className="ml-auto text-xs text-muted-foreground/60 tabular-nums">
+              <span className="inline-flex items-center gap-1 rounded-full border border-foreground/20 bg-foreground/5 px-2 py-0.5 text-xs font-medium text-foreground">
+                <ArrowRight className="h-2.5 w-2.5" strokeWidth={2.5} />
+                {entry.newStage}
+              </span>
+            </div>
+            <span className="mt-0.5 block text-xs text-muted-foreground/60 tabular-nums">
               {formatDateTime(entry.timestamp)}
             </span>
           </div>
@@ -198,23 +204,23 @@ function HumanMessage({
       </div>
 
       {/* Message card */}
-      <div className="flex-1 pb-5">
+      <div className="min-w-0 flex-1 pb-5">
         {/* Header */}
-        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
           <span className="text-sm font-semibold text-foreground">
             {entry.postedBy}
           </span>
           <RoleBadge role={entry.actorRole} />
-          <span className="ml-auto text-xs text-muted-foreground/60 tabular-nums">
-            {formatDateTime(entry.timestamp)}
-          </span>
         </div>
+        <span className="mt-0.5 block text-xs text-muted-foreground/60 tabular-nums">
+          {formatDateTime(entry.timestamp)}
+        </span>
 
         {/* Message bubble */}
         {(entry.note || entry.file) && (
           <div
             className={cn(
-              "mt-2 rounded-xl rounded-tl-sm border bg-card p-3.5",
+              "mt-2 min-w-0 overflow-hidden rounded-xl rounded-tl-sm border bg-card p-3.5",
               // Left border accent matches role color
               "border-l-2",
               entry.actorRole === "vendor" &&
@@ -229,7 +235,7 @@ function HumanMessage({
             )}
           >
             {entry.note && (
-              <p className="text-sm leading-relaxed text-foreground">
+              <p className="break-words text-sm leading-relaxed text-foreground">
                 {entry.note}
               </p>
             )}

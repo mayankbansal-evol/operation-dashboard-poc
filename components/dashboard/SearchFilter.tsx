@@ -36,6 +36,8 @@ interface SearchFilterProps {
   activeFilters: { key: string; label: string; onRemove: () => void }[];
   hasFilters: boolean;
   onClear: () => void;
+  /** Optional pills rendered inline to the right of the search input */
+  quickFilters?: React.ReactNode;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -52,6 +54,7 @@ export function SearchFilter({
   activeFilters,
   hasFilters,
   onClear,
+  quickFilters,
 }: SearchFilterProps) {
   const [staffOpen, setStaffOpen] = useState(false);
 
@@ -77,20 +80,20 @@ export function SearchFilter({
     : peopleWithCounts;
 
   return (
-    <div className="space-y-3">
-      {/* Row 1: Search + Type toggle + Staff selector */}
-      <div className="flex flex-wrap items-center gap-2">
-        {/* Search */}
-        <div className="relative min-w-[240px] flex-1">
-          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search customer, order #, vendor, category…"
-            value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="h-9 pl-8 text-sm"
-          />
-        </div>
+    <div className="space-y-2.5">
+      {/* Row 1: Search — full width */}
+      <div className="relative w-full">
+        <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Search customer, order #, vendor, category…"
+          value={search}
+          onChange={(e) => onSearchChange(e.target.value)}
+          className="h-9 w-full pl-8 text-sm"
+        />
+      </div>
 
+      {/* Row 2: Type toggle + Staff selector on left, quick-filter pills on right */}
+      <div className="flex flex-wrap items-center gap-2">
         {/* Type toggle */}
         <div className="flex items-center rounded-lg border border-border bg-card p-0.5">
           {(
@@ -125,26 +128,27 @@ export function SearchFilter({
           ))}
         </div>
 
-        {/* Staff/Vendor combobox */}
+        {/* Staff/Vendor combobox — flex-1 on mobile so it fills remaining space */}
         <Popover open={staffOpen} onOpenChange={setStaffOpen}>
           <PopoverTrigger asChild>
             <Button
               variant="outline"
               role="combobox"
               aria-expanded={staffOpen}
-              className="h-9 w-[180px] justify-between px-3 text-xs"
+              className="h-9 flex-1 justify-between px-3 text-xs sm:flex-none sm:w-[180px]"
             >
-              <div className="flex items-center gap-2">
-                <User className="h-3.5 w-3.5 text-muted-foreground" />
+              <div className="flex items-center gap-2 min-w-0">
+                <User className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
                 <span
-                  className={
-                    staffSearch ? "text-foreground" : "text-muted-foreground"
-                  }
+                  className={cn(
+                    "truncate",
+                    staffSearch ? "text-foreground" : "text-muted-foreground",
+                  )}
                 >
                   {staffSearch || "All people"}
                 </span>
               </div>
-              <ChevronDown className="h-3 w-3 opacity-50" />
+              <ChevronDown className="ml-2 h-3 w-3 flex-shrink-0 opacity-50" />
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-[240px] p-0" align="start">
@@ -206,9 +210,16 @@ export function SearchFilter({
             </Command>
           </PopoverContent>
         </Popover>
+
+        {/* Quick filters slot — urgency / risk pills, pushed to the right */}
+        {quickFilters && (
+          <div className="ml-auto flex flex-wrap items-center gap-1.5">
+            {quickFilters}
+          </div>
+        )}
       </div>
 
-      {/* Row 2: Active filter chips + Clear all */}
+      {/* Row 3: Active filter chips + Clear all */}
       {activeFilters.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-[11px] text-muted-foreground">

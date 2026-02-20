@@ -193,8 +193,17 @@ export default function OrderPage() {
 
       {/* ── Page header ──────────────────────────────────────────────── */}
       <div className="mb-6">
-        {/* Type + order number row */}
-        <div className="mb-2 flex flex-wrap items-center gap-2">
+        {/* Customer name — first on mobile for immediate context */}
+        <h1 className="mb-2 text-xl font-semibold tracking-tight text-foreground">
+          {order.customerName}
+          <span className="ml-2 font-normal text-muted-foreground">·</span>
+          <span className="ml-2 text-base font-normal text-muted-foreground">
+            {order.category}
+          </span>
+        </h1>
+
+        {/* Type + order number + urgency + actions — wraps cleanly on mobile */}
+        <div className="mb-3 flex flex-wrap items-center gap-2">
           <span
             className={cn(
               "rounded-full px-2.5 py-0.5 text-xs font-medium",
@@ -227,28 +236,22 @@ export default function OrderPage() {
               {daysLabel}
             </span>
           )}
-          {/* Actions — top right */}
-          <div className="ml-auto flex items-center gap-2">
+          {/* Actions — pushed right, wraps on mobile if needed */}
+          <div className="ml-auto flex flex-wrap items-center gap-2">
             {order.type === "enquiry" && (
               <Button size="sm" asChild className="h-8 gap-1.5 text-xs">
                 <Link href={`/orders/new?from=${order.id}`}>
                   <GitPullRequest className="h-3.5 w-3.5" />
-                  Convert to Order
+                  <span className="hidden xs:inline sm:inline">
+                    Convert to Order
+                  </span>
+                  <span className="xs:hidden sm:hidden">Convert</span>
                 </Link>
               </Button>
             )}
             <CopyLinkButton />
           </div>
         </div>
-
-        {/* Customer name */}
-        <h1 className="mb-3 text-xl font-semibold tracking-tight text-foreground">
-          {order.customerName}
-          <span className="ml-2 font-normal text-muted-foreground">·</span>
-          <span className="ml-2 text-base font-normal text-muted-foreground">
-            {order.category}
-          </span>
-        </h1>
 
         {/* Actors bar */}
         <ActorsBar order={order} />
@@ -276,11 +279,11 @@ export default function OrderPage() {
 
       {/* ── Order Details (collapsible, default open) ────────────────── */}
       <div className="mb-5">
-        <OrderDetails order={order} defaultOpen={true} />
+        <OrderDetails order={order} defaultOpen={false} />
       </div>
 
       {/* ── Timeline ─────────────────────────────────────────────────── */}
-      <div className="rounded-xl border border-border bg-card">
+      <div className="overflow-hidden rounded-xl border border-border bg-card">
         {/* Timeline header */}
         <div className="flex items-center justify-between border-b border-border px-5 py-3.5">
           <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">

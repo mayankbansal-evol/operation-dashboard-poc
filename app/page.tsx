@@ -300,7 +300,7 @@ export default function DashboardPage() {
         )}
 
         {/* ── Page header ──────────────────────────────────────────────── */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start justify-between gap-3">
           <div>
             <h1 className="text-xl font-semibold tracking-tight text-foreground">
               Operations Dashboard
@@ -315,72 +315,88 @@ export default function DashboardPage() {
             </p>
           </div>
 
-          {/* View toggle + Urgency filters */}
-          <div className="flex flex-wrap items-center gap-3">
-            {/* View mode toggle */}
-            <div className="flex items-center rounded-lg border border-border bg-card p-0.5">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={() => setViewMode("list")}
-                    className={cn(
-                      "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all",
-                      viewMode === "list"
-                        ? "bg-foreground text-background shadow-sm"
-                        : "text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    <List className="h-3.5 w-3.5" />
-                    List
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p className="text-xs">Table view with all details</p>
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!kanbanAllowed) return;
-                      setViewMode("kanban");
-                    }}
-                    disabled={!kanbanAllowed}
-                    aria-disabled={!kanbanAllowed}
-                    className={cn(
-                      "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all",
-                      viewMode === "kanban"
-                        ? "bg-foreground text-background shadow-sm"
-                        : kanbanAllowed
-                          ? "text-muted-foreground hover:text-foreground"
-                          : "text-muted-foreground/50 cursor-not-allowed",
-                    )}
-                  >
-                    <LayoutGrid className="h-3.5 w-3.5" />
-                    Board
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p className="text-xs">
-                    {kanbanAllowed
-                      ? "Drag & drop kanban board"
-                      : "Kanban board disabled while viewing enquiries"}
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </div>
-            {!kanbanAllowed && (
-              <p className="text-[11px] text-muted-foreground">
-                Switch to All/Orders to access the board.
-              </p>
-            )}
+          {/* View mode toggle — top-right on all screen sizes */}
+          <div className="flex flex-shrink-0 items-center rounded-lg border border-border bg-card p-0.5">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={() => setViewMode("list")}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-all",
+                    viewMode === "list"
+                      ? "bg-foreground text-background shadow-sm"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  <List className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">List</span>
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <p className="text-xs">Table view with all details</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!kanbanAllowed) return;
+                    setViewMode("kanban");
+                  }}
+                  disabled={!kanbanAllowed}
+                  aria-disabled={!kanbanAllowed}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-all",
+                    viewMode === "kanban"
+                      ? "bg-foreground text-background shadow-sm"
+                      : kanbanAllowed
+                        ? "text-muted-foreground hover:text-foreground"
+                        : "cursor-not-allowed text-muted-foreground/50",
+                  )}
+                >
+                  <LayoutGrid className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Board</span>
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <p className="text-xs">
+                  {kanbanAllowed
+                    ? "Drag & drop kanban board"
+                    : "Kanban board disabled while viewing enquiries"}
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        </div>
 
-            <div className="h-4 w-px bg-border" />
+        {/* ── Pipeline summary (counts filtered by type) ─────────────── */}
+        <PipelineSummary
+          stageCounts={stageCounts}
+          activeFilter={stageFilter}
+          onFilterChange={setStageFilter}
+          typeFilter={typeFilter}
+        />
 
-            {/* Urgency quick filters */}
-            <div className="flex flex-wrap items-center gap-2">
+        {/* ── Needs attention — at-risk chip strip ─────────────────────── */}
+        <TodaysFocus orders={orders} onShowAll={() => setRiskFilter(true)} />
+
+        {/* ── Search + filters (urgency pills live in the search row) ──── */}
+        <SearchFilter
+          search={search}
+          onSearchChange={setSearch}
+          typeFilter={typeFilter}
+          onTypeChange={setTypeFilter}
+          typeCounts={typeCounts}
+          staffSearch={staffSearch}
+          onStaffChange={setStaffSearch}
+          allPeople={allPeople}
+          activeFilters={activeFilters}
+          hasFilters={hasFilters}
+          onClear={clearFilters}
+          quickFilters={
+            <>
               {urgencyCounts.overdue > 0 && (
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -474,8 +490,6 @@ export default function DashboardPage() {
                   </TooltipContent>
                 </Tooltip>
               )}
-
-              {/* At-risk filter pill — stale + stuck */}
               {riskCount > 0 && (
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -500,34 +514,13 @@ export default function DashboardPage() {
                   </TooltipContent>
                 </Tooltip>
               )}
-            </div>
-          </div>
-        </div>
-
-        {/* ── Pipeline summary (counts filtered by type) ─────────────── */}
-        <PipelineSummary
-          stageCounts={stageCounts}
-          activeFilter={stageFilter}
-          onFilterChange={setStageFilter}
-          typeFilter={typeFilter}
-        />
-
-        {/* ── Needs attention — at-risk chip strip ─────────────────────── */}
-        <TodaysFocus orders={orders} onShowAll={() => setRiskFilter(true)} />
-
-        {/* ── Search + filters ─────────────────────────────────────────── */}
-        <SearchFilter
-          search={search}
-          onSearchChange={setSearch}
-          typeFilter={typeFilter}
-          onTypeChange={setTypeFilter}
-          typeCounts={typeCounts}
-          staffSearch={staffSearch}
-          onStaffChange={setStaffSearch}
-          allPeople={allPeople}
-          activeFilters={activeFilters}
-          hasFilters={hasFilters}
-          onClear={clearFilters}
+              {!kanbanAllowed && viewMode === "kanban" && (
+                <p className="text-[11px] text-muted-foreground">
+                  Switch to All/Orders for board view.
+                </p>
+              )}
+            </>
+          }
         />
 
         {/* ── Content: List or Kanban ──────────────────────────────────── */}

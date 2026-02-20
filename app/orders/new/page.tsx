@@ -791,26 +791,26 @@ function NewOrderForm() {
           </FormField>
 
           {/* CAD design toggle */}
-          <div className="flex items-start gap-3 rounded-lg border border-border bg-muted/30 p-3 sm:col-span-2">
+          <label
+            htmlFor="cadDesignRequired"
+            className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-muted/30 p-3 transition-colors hover:bg-muted/50 sm:col-span-2"
+          >
             <Checkbox
               id="cadDesignRequired"
               checked={form.cadDesignRequired}
               onCheckedChange={(checked) => set("cadDesignRequired", !!checked)}
-              className="mt-0.5"
+              className="mt-0.5 flex-shrink-0"
             />
-            <div>
-              <label
-                htmlFor="cadDesignRequired"
-                className="cursor-pointer text-sm font-medium text-foreground"
-              >
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-foreground">
                 CAD design required
-              </label>
-              <p className="mt-0.5 text-xs text-muted-foreground">
+              </p>
+              <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
                 Check this for custom pieces where a digital design needs vendor
                 approval before production starts.
               </p>
             </div>
-          </div>
+          </label>
 
           <FormField
             label="Special instructions"

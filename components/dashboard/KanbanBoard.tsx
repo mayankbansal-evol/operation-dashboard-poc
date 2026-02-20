@@ -151,6 +151,11 @@ export function KanbanBoard({
           ))}
         </div>
 
+        {/* Mobile scroll hint */}
+        <p className="mt-1 text-center text-[11px] text-muted-foreground/50 sm:hidden">
+          Swipe to see all stages →
+        </p>
+
         {/* Drag overlay - shows what's being dragged */}
         <DragOverlay dropAnimation={null}>
           {activeOrder ? (

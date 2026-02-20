@@ -174,7 +174,7 @@ export function TodaysFocus({ orders, onShowAll }: TodaysFocusProps) {
       </div>
 
       {/* Horizontally scrollable chip strip */}
-      <div className="flex gap-2 overflow-x-auto pb-0.5 scrollbar-hide">
+      <div className="flex gap-2 overflow-x-auto pb-0.5 scrollbar-none">
         {visible.map(({ order, signal }) => (
           <RiskChip key={order.id} order={order} signal={signal} />
         ))}

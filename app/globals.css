@@ -192,4 +192,21 @@
   .snap-center {
     scroll-snap-align: center;
   }
+
+  /* Hide scrollbar but keep scrollability (for pipeline summary mobile strip) */
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Ensure minimum touch target sizes on interactive elements */
+  @media (max-width: 640px) {
+    button,
+    a {
+      min-height: 36px;
+    }
+  }
 }
