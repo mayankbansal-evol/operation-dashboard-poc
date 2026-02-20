@@ -7,7 +7,9 @@ import { useState } from "react";
 import { UrgencyDot } from "@/components/dashboard/UrgencyDot";
 import { ActivityTimeline } from "@/components/order/ActivityTimeline";
 import { ComposeBox } from "@/components/order/ComposeBox";
+import { DownloadPDFButton } from "@/components/order/DownloadPDFButton";
 import { OrderDetails } from "@/components/order/OrderDetails";
+import { OrderPrintView } from "@/components/order/OrderPrintView";
 import { ProductionSpecCard } from "@/components/order/ProductionSpecCard";
 import { StageBar } from "@/components/order/StageBar";
 import { StageHint } from "@/components/order/StageHint";
@@ -250,6 +252,7 @@ export default function OrderPage() {
               </Button>
             )}
             <CopyLinkButton />
+            <DownloadPDFButton />
           </div>
         </div>
 
@@ -319,6 +322,9 @@ export default function OrderPage() {
       </div>
 
       <div className="h-16" />
+
+      {/* ── Print-only document — hidden in UI, shown when printing ── */}
+      <OrderPrintView order={order} />
     </div>
   );
 }

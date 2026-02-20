@@ -210,3 +210,55 @@
     }
   }
 }
+
+/* ─── Print styles ──────────────────────────────────────────────────────────── */
+@media print {
+  /* Hide everything by default */
+  body > * {
+    display: none !important;
+  }
+
+  /* Show only the print view */
+  #order-print-view {
+    display: block !important;
+  }
+
+  /* Reset page chrome */
+  body {
+    background: white !important;
+    color: black !important;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 11pt;
+    line-height: 1.5;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Remove dot-grid background */
+  body::before {
+    display: none !important;
+  }
+
+  /* Page margins */
+  @page {
+    margin: 18mm 16mm;
+    size: A4 portrait;
+  }
+
+  /* Avoid breaking inside key blocks */
+  .print-section {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Force page break before major sections when needed */
+  .print-break-before {
+    break-before: page;
+    page-break-before: always;
+  }
+
+  /* Utility: hide in print */
+  .print-hide {
+    display: none !important;
+  }
+}
