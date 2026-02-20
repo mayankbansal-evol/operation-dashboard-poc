@@ -44,7 +44,7 @@ export const mockOrders: Order[] = [
     deliveryDate: daysFromToday(-5),
     currentStage: "Building",
     createdAt: isoTs(daysAgo(30)),
-    lastUpdatedAt: isoTs(daysAgo(4)),
+    lastUpdatedAt: isoTs(daysAgo(8)),
     specialInstructions: "Engrave 'P & R 14.02.2025' inside the band",
     activityFeed: [
       {
@@ -152,7 +152,7 @@ export const mockOrders: Order[] = [
         orderId: "ord-001",
         postedBy: "Ananya S.",
         actorRole: "sales",
-        timestamp: isoTs(daysAgo(3), "10:00:00"),
+        timestamp: isoTs(daysAgo(8), "10:00:00"),
         type: "note",
         note: "Informed Priya about the delay. She's okay with waiting a few more days but needs it before the 28th at the latest.",
       },
@@ -445,7 +445,7 @@ export const mockOrders: Order[] = [
         orderId: "ord-004",
         postedBy: "Dev R.",
         actorRole: "sales",
-        timestamp: isoTs(daysAgo(10), "11:00:00"),
+        timestamp: isoTs(daysAgo(12), "11:00:00"),
         type: "stage_change",
         previousStage: "CAD Design",
         newStage: "Building",

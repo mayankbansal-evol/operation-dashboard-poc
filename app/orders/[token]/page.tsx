@@ -8,7 +8,9 @@ import { UrgencyDot } from "@/components/dashboard/UrgencyDot";
 import { ActivityTimeline } from "@/components/order/ActivityTimeline";
 import { ComposeBox } from "@/components/order/ComposeBox";
 import { OrderDetails } from "@/components/order/OrderDetails";
+import { ProductionSpecCard } from "@/components/order/ProductionSpecCard";
 import { StageBar } from "@/components/order/StageBar";
+import { StageHint } from "@/components/order/StageHint";
 import { Button } from "@/components/ui/button";
 import { getOrderByToken } from "@/lib/mock-data";
 import {
@@ -252,6 +254,11 @@ export default function OrderPage() {
         <ActorsBar order={order} />
       </div>
 
+      {/* ── Stage hint — contextual next step for this stage ─────────── */}
+      <div className="mb-5">
+        <StageHint currentStage={order.currentStage} />
+      </div>
+
       {/* ── Stage Bar ────────────────────────────────────────────────── */}
       <div className="mb-5 rounded-xl border border-border bg-card px-5 py-4">
         <StageBar
@@ -260,9 +267,16 @@ export default function OrderPage() {
         />
       </div>
 
-      {/* ── Order Details (collapsible) ──────────────────────────────── */}
+      {/* ── Production Spec Card — vendor-facing work order summary ─────── */}
+      {order.type === "order" && (
+        <div className="mb-5">
+          <ProductionSpecCard order={order} />
+        </div>
+      )}
+
+      {/* ── Order Details (collapsible, default open) ────────────────── */}
       <div className="mb-5">
-        <OrderDetails order={order} defaultOpen={false} />
+        <OrderDetails order={order} defaultOpen={true} />
       </div>
 
       {/* ── Timeline ─────────────────────────────────────────────────── */}

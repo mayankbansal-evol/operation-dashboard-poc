@@ -21,6 +21,31 @@ export type RecordType = "enquiry" | "order";
 
 export type UrgencyLevel = "overdue" | "due-soon" | "on-track" | "none";
 
+// ─── Risk signals ─────────────────────────────────────────────────────────────
+
+/**
+ * Risk signal beyond simple delivery-date urgency.
+ * - "stale": no activity posted in 7+ days (someone needs to check in)
+ * - "stuck": sitting in current stage longer than expected for that stage
+ * - null: no risk signal
+ */
+export type RiskSignal = "stale" | "stuck" | null;
+
+/**
+ * Expected maximum number of days an order should stay in a given stage
+ * before it's considered "stuck". Terminal stages are excluded.
+ */
+export const STAGE_EXPECTED_DAYS: Partial<Record<Stage, number>> = {
+  Enquiry: 2,
+  Estimation: 3,
+  "CAD Design": 5,
+  "Order Confirmed": 2,
+  Building: 10,
+  Certification: 5,
+  "Shipped to Store": 3,
+  // "Customer Pickup" is terminal — no expected duration
+};
+
 // ─── Actor Roles ─────────────────────────────────────────────────────────────
 
 export type ActorRole = "sales" | "vendor" | "owner" | "customer";

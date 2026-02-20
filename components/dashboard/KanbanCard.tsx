@@ -2,13 +2,21 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { AlertTriangle, Clock } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { cn, formatDaysRemaining, getUrgencyLevel } from "@/lib/utils";
+import {
+  cn,
+  computeRiskSignal,
+  formatDaysRemaining,
+  getDaysInCurrentStage,
+  getDaysSinceLastActivity,
+  getUrgencyLevel,
+} from "@/lib/utils";
 import type { Order } from "@/types";
 import { UrgencyDot } from "./UrgencyDot";
 
@@ -50,6 +58,9 @@ export function KanbanCard({ order, onClick }: KanbanCardProps) {
 
   const urgency = getUrgencyLevel(order.deliveryDate);
   const daysLabel = formatDaysRemaining(order.deliveryDate);
+  const riskSignal = computeRiskSignal(order);
+  const isStale = riskSignal === "stale";
+  const isStuck = riskSignal === "stuck";
 
   if (isDragging) {
     return (
@@ -78,6 +89,9 @@ export function KanbanCard({ order, onClick }: KanbanCardProps) {
               urgency === "due-soon" && "border-l-amber-400",
               urgency === "on-track" && "border-l-emerald-500",
               urgency === "none" && "border-l-muted-foreground/30",
+              // Risk overlay — subtle top border on at-risk cards
+              (isStale || isStuck) &&
+                "border-t-orange-300 dark:border-t-orange-700/60",
             )}
           >
             {/* Urgency indicator bar */}
@@ -91,10 +105,34 @@ export function KanbanCard({ order, onClick }: KanbanCardProps) {
               )}
             />
 
+            {/* Risk signal badge — top right corner */}
+            {(isStale || isStuck) && (
+              <div
+                className={cn(
+                  "absolute right-2 top-2 flex items-center gap-0.5 rounded px-1 py-0.5 text-[9px] font-semibold",
+                  isStale
+                    ? "bg-orange-100 text-orange-600 dark:bg-orange-950/60 dark:text-orange-400"
+                    : "bg-amber-100 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400",
+                )}
+              >
+                {isStale ? (
+                  <Clock className="h-2.5 w-2.5" />
+                ) : (
+                  <AlertTriangle className="h-2.5 w-2.5" />
+                )}
+                {isStale ? "stale" : "stuck"}
+              </div>
+            )}
+
             {/* Content */}
             <div className="pl-2">
-              {/* Customer name */}
-              <p className="truncate text-sm font-semibold text-foreground">
+              {/* Customer name — shift right of risk badge */}
+              <p
+                className={cn(
+                  "truncate text-sm font-semibold text-foreground",
+                  (isStale || isStuck) && "pr-10",
+                )}
+              >
                 {order.customerName}
               </p>
 

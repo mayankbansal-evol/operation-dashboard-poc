@@ -1,8 +1,7 @@
 "use client";
 
-import { ArrowUpRight, Inbox } from "lucide-react";
+import { AlertTriangle, ArrowUpRight, Clock, Inbox } from "lucide-react";
 import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
 import {
   Tooltip,
   TooltipContent,
@@ -11,9 +10,13 @@ import {
 } from "@/components/ui/tooltip";
 import {
   cn,
+  computeRiskSignal,
   formatDate,
   formatDaysRemaining,
+  formatRelativeTime,
+  getDaysInCurrentStage,
   getDaysRemaining,
+  getDaysSinceLastActivity,
   getUrgencyLevel,
 } from "@/lib/utils";
 import type { Order } from "@/types";
@@ -91,6 +94,44 @@ function RowTooltip({
   );
 }
 
+function RiskBadge({ order }: { order: Order }) {
+  const signal = computeRiskSignal(order);
+  if (!signal) return null;
+
+  const isStale = signal === "stale";
+  const daysSince = getDaysSinceLastActivity(order);
+  const daysInStage = getDaysInCurrentStage(order);
+
+  const tooltipText = isStale
+    ? `No activity for ${daysSince} days — follow up needed`
+    : `In ${order.currentStage} for ${daysInStage} days — longer than expected`;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span
+          className={cn(
+            "ml-1.5 inline-flex items-center gap-0.5 rounded px-1 py-0.5 text-[10px] font-medium",
+            isStale
+              ? "bg-orange-100 text-orange-600 dark:bg-orange-950/60 dark:text-orange-400"
+              : "bg-amber-100 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400",
+          )}
+        >
+          {isStale ? (
+            <Clock className="h-2.5 w-2.5" />
+          ) : (
+            <AlertTriangle className="h-2.5 w-2.5" />
+          )}
+          {isStale ? "stale" : "stuck"}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent side="top" className="max-w-[200px]">
+        <p className="text-xs">{tooltipText}</p>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 export function OrderList({ orders }: OrderListProps) {
   if (orders.length === 0) {
     return (
@@ -125,7 +166,7 @@ export function OrderList({ orders }: OrderListProps) {
             Vendor
           </span>
           <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/70">
-            Created
+            Last update
           </span>
           <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/70">
             Delivery
@@ -141,9 +182,11 @@ export function OrderList({ orders }: OrderListProps) {
             const deliveryFormatted = order.deliveryDate
               ? formatDate(order.deliveryDate)
               : "—";
-            const createdFormatted = order.createdAt
-              ? formatDate(order.createdAt)
+            const lastUpdateLabel = order.lastUpdatedAt
+              ? formatRelativeTime(order.lastUpdatedAt)
               : "—";
+            const daysSinceLast = getDaysSinceLastActivity(order);
+            const isStaleRow = daysSinceLast !== null && daysSinceLast >= 7;
             const stageColorClass =
               STAGE_COLORS[order.currentStage] ??
               "border-border text-muted-foreground";
@@ -186,8 +229,8 @@ export function OrderList({ orders }: OrderListProps) {
                     </div>
                   </div>
 
-                  {/* Stage */}
-                  <div>
+                  {/* Stage + risk signal */}
+                  <div className="flex flex-wrap items-center gap-y-1">
                     <span
                       className={cn(
                         "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium",
@@ -196,6 +239,7 @@ export function OrderList({ orders }: OrderListProps) {
                     >
                       {order.currentStage}
                     </span>
+                    <RiskBadge order={order} />
                   </div>
 
                   {/* Salesperson */}
@@ -212,10 +256,17 @@ export function OrderList({ orders }: OrderListProps) {
                     </p>
                   </div>
 
-                  {/* Created */}
+                  {/* Last update */}
                   <div>
-                    <p className="text-sm text-muted-foreground tabular-nums">
-                      {createdFormatted}
+                    <p
+                      className={cn(
+                        "text-sm tabular-nums",
+                        isStaleRow
+                          ? "font-medium text-orange-600 dark:text-orange-400"
+                          : "text-muted-foreground",
+                      )}
+                    >
+                      {lastUpdateLabel}
                     </p>
                   </div>
 

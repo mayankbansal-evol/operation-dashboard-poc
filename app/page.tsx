@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, LayoutGrid, List } from "lucide-react";
+import { AlertTriangle, CheckCircle2, LayoutGrid, List } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { KanbanBoard } from "@/components/dashboard/KanbanBoard";
@@ -10,6 +10,7 @@ import {
   SearchFilter,
   type TypeFilter,
 } from "@/components/dashboard/SearchFilter";
+import { TodaysFocus } from "@/components/dashboard/TodaysFocus";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -18,7 +19,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { mockOrders } from "@/lib/mock-data";
-import { cn, formatDate, getUrgencyLevel } from "@/lib/utils";
+import {
+  cn,
+  computeRiskSignal,
+  formatDate,
+  getUrgencyLevel,
+} from "@/lib/utils";
 import {
   type ActivityEntry,
   type Order,
@@ -103,6 +109,17 @@ export default function DashboardPage() {
     );
   }, [orders]);
 
+  // Risk breakdown — stale + stuck (unfiltered, excludes completed)
+  const riskCount = useMemo(() => {
+    return orders.filter(
+      (o) =>
+        o.currentStage !== "Customer Pickup" && computeRiskSignal(o) !== null,
+    ).length;
+  }, [orders]);
+
+  // Risk filter state
+  const [riskFilter, setRiskFilter] = useState(false);
+
   // Filtered orders
   const filteredOrders = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -118,6 +135,9 @@ export default function DashboardPage() {
         const level = getUrgencyLevel(order.deliveryDate);
         if (level !== urgencyFilter) return false;
       }
+
+      // Risk filter — only at-risk orders (stale or stuck)
+      if (riskFilter && computeRiskSignal(order) === null) return false;
 
       // Staff search (matches salesperson OR vendor)
       if (staffSearch.trim()) {
@@ -146,7 +166,15 @@ export default function DashboardPage() {
 
       return true;
     });
-  }, [search, typeFilter, stageFilter, urgencyFilter, staffSearch, orders]);
+  }, [
+    search,
+    typeFilter,
+    stageFilter,
+    urgencyFilter,
+    riskFilter,
+    staffSearch,
+    orders,
+  ]);
 
   // Handle order move from kanban
   const handleOrderMove = (orderId: string, newStage: Stage) => {
@@ -189,7 +217,7 @@ export default function DashboardPage() {
 
     if (!movedOrder) return;
 
-    setLastMoved({ name: movedOrder.customerName, stage: newStage });
+    setLastMoved({ name: (movedOrder as Order).customerName, stage: newStage });
     setTimeout(() => setLastMoved(null), 3000);
   };
 
@@ -223,6 +251,13 @@ export default function DashboardPage() {
         onRemove: () => setUrgencyFilter(null),
       });
     }
+    if (riskFilter) {
+      filters.push({
+        key: "risk",
+        label: "At risk",
+        onRemove: () => setRiskFilter(false),
+      });
+    }
     if (staffSearch.trim()) {
       filters.push({
         key: "staff",
@@ -231,13 +266,14 @@ export default function DashboardPage() {
       });
     }
     return filters;
-  }, [typeFilter, stageFilter, urgencyFilter, staffSearch]);
+  }, [typeFilter, stageFilter, urgencyFilter, riskFilter, staffSearch]);
 
   const hasFilters =
     !!search ||
     typeFilter !== "all" ||
     !!stageFilter ||
     !!urgencyFilter ||
+    riskFilter ||
     !!staffSearch.trim();
 
   function clearFilters() {
@@ -245,6 +281,7 @@ export default function DashboardPage() {
     setTypeFilter("all");
     setStageFilter(null);
     setUrgencyFilter(null);
+    setRiskFilter(false);
     setStaffSearch("");
   }
 
@@ -268,8 +305,8 @@ export default function DashboardPage() {
             <h1 className="text-xl font-semibold tracking-tight text-foreground">
               Operations Dashboard
             </h1>
-              <p className="mt-0.5 text-sm text-muted-foreground">
-                {filteredOrders.length} of {orders.length} records
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              {filteredOrders.length} of {orders.length} records
               {typeFilter !== "all" && (
                 <span className="ml-1 text-foreground">
                   · {typeFilter === "order" ? "orders" : "enquiries"} only
@@ -278,69 +315,69 @@ export default function DashboardPage() {
             </p>
           </div>
 
-            {/* View toggle + Urgency filters */}
-            <div className="flex flex-wrap items-center gap-3">
-              {/* View mode toggle */}
-              <div className="flex items-center rounded-lg border border-border bg-card p-0.5">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={() => setViewMode("list")}
-                      className={cn(
-                        "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all",
-                        viewMode === "list"
-                          ? "bg-foreground text-background shadow-sm"
-                          : "text-muted-foreground hover:text-foreground",
-                      )}
-                    >
-                      <List className="h-3.5 w-3.5" />
-                      List
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    <p className="text-xs">Table view with all details</p>
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!kanbanAllowed) return;
-                        setViewMode("kanban");
-                      }}
-                      disabled={!kanbanAllowed}
-                      aria-disabled={!kanbanAllowed}
-                      className={cn(
-                        "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all",
-                        viewMode === "kanban"
-                          ? "bg-foreground text-background shadow-sm"
-                          : kanbanAllowed
-                            ? "text-muted-foreground hover:text-foreground"
-                            : "text-muted-foreground/50 cursor-not-allowed",
-                      )}
-                    >
-                      <LayoutGrid className="h-3.5 w-3.5" />
-                      Board
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    <p className="text-xs">
-                      {kanbanAllowed
-                        ? "Drag & drop kanban board"
-                        : "Kanban board disabled while viewing enquiries"}
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              {!kanbanAllowed && (
-                <p className="text-[11px] text-muted-foreground">
-                  Switch to All/Orders to access the board.
-                </p>
-              )}
+          {/* View toggle + Urgency filters */}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* View mode toggle */}
+            <div className="flex items-center rounded-lg border border-border bg-card p-0.5">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode("list")}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all",
+                      viewMode === "list"
+                        ? "bg-foreground text-background shadow-sm"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    <List className="h-3.5 w-3.5" />
+                    List
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p className="text-xs">Table view with all details</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!kanbanAllowed) return;
+                      setViewMode("kanban");
+                    }}
+                    disabled={!kanbanAllowed}
+                    aria-disabled={!kanbanAllowed}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all",
+                      viewMode === "kanban"
+                        ? "bg-foreground text-background shadow-sm"
+                        : kanbanAllowed
+                          ? "text-muted-foreground hover:text-foreground"
+                          : "text-muted-foreground/50 cursor-not-allowed",
+                    )}
+                  >
+                    <LayoutGrid className="h-3.5 w-3.5" />
+                    Board
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p className="text-xs">
+                    {kanbanAllowed
+                      ? "Drag & drop kanban board"
+                      : "Kanban board disabled while viewing enquiries"}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+            {!kanbanAllowed && (
+              <p className="text-[11px] text-muted-foreground">
+                Switch to All/Orders to access the board.
+              </p>
+            )}
 
-              <div className="h-4 w-px bg-border" />
+            <div className="h-4 w-px bg-border" />
 
             {/* Urgency quick filters */}
             <div className="flex flex-wrap items-center gap-2">
@@ -437,6 +474,32 @@ export default function DashboardPage() {
                   </TooltipContent>
                 </Tooltip>
               )}
+
+              {/* At-risk filter pill — stale + stuck */}
+              {riskCount > 0 && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => setRiskFilter((v) => !v)}
+                      className={cn(
+                        "flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors",
+                        riskFilter
+                          ? "border-orange-400 bg-orange-50 text-orange-700 dark:border-orange-700 dark:bg-orange-950 dark:text-orange-300"
+                          : "border-border bg-card text-muted-foreground hover:border-orange-300 hover:bg-orange-50/50",
+                      )}
+                    >
+                      <AlertTriangle className="h-3 w-3 text-orange-500" />
+                      <span className="font-medium">{riskCount}</span>
+                      <span>at risk</span>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p className="text-xs">
+                      Stale (7+ days no update) or stuck in stage
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
             </div>
           </div>
         </div>
@@ -448,6 +511,9 @@ export default function DashboardPage() {
           onFilterChange={setStageFilter}
           typeFilter={typeFilter}
         />
+
+        {/* ── Needs attention — at-risk chip strip ─────────────────────── */}
+        <TodaysFocus orders={orders} onShowAll={() => setRiskFilter(true)} />
 
         {/* ── Search + filters ─────────────────────────────────────────── */}
         <SearchFilter

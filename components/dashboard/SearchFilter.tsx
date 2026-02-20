@@ -206,22 +206,9 @@ export function SearchFilter({
             </Command>
           </PopoverContent>
         </Popover>
-
-        {/* Clear button */}
-        {hasFilters && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClear}
-            className="h-9 gap-1.5 text-xs text-muted-foreground"
-          >
-            <X className="h-3.5 w-3.5" />
-            Clear all
-          </Button>
-        )}
       </div>
 
-      {/* Row 2: Active filter chips */}
+      {/* Row 2: Active filter chips + Clear all */}
       {activeFilters.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-[11px] text-muted-foreground">
@@ -237,6 +224,15 @@ export function SearchFilter({
               <X className="h-3 w-3 opacity-50 group-hover:opacity-100" />
             </button>
           ))}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClear}
+            className="ml-auto h-7 gap-1 px-2 text-xs text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-3 w-3" />
+            Clear all
+          </Button>
         </div>
       )}
     </div>
